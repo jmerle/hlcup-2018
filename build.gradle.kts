@@ -20,6 +20,8 @@ dependencies {
     compile("com.mihnita:color-loggers:1.0.5")
     compile("io.ktor:ktor-server-core:1.1.1")
     compile("io.ktor:ktor-server-netty:1.1.1")
+    compile("org.xerial:sqlite-jdbc:3.25.2")
+    compile("com.google.code.gson:gson:2.8.5")
 }
 
 tasks {
