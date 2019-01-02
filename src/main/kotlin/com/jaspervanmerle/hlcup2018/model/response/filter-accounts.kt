@@ -2,6 +2,11 @@ package com.jaspervanmerle.hlcup2018.model.response
 
 import com.google.gson.annotations.SerializedName
 
+data class FilterAccountsPremium(
+    val start: Int,
+    @SerializedName("finish") val end: Int
+)
+
 data class FilterAccountsAccount(
     val id: Int,
     val email: String,
@@ -12,7 +17,8 @@ data class FilterAccountsAccount(
     var birth: Int? = null,
     var country: String? = null,
     var city: String? = null,
-    var status: String? = null
+    var status: String? = null,
+    var premium: FilterAccountsPremium? = null
 )
 
 data class FilterAccountsResponse(val accounts: List<FilterAccountsAccount>)

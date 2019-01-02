@@ -13,7 +13,6 @@ import io.netty.util.NettyRuntime
 import mu.KLogging
 import java.io.File
 import java.sql.Types
-import java.util.*
 
 object HLCup2018 : KLogging() {
     fun prepare(dataDirectory: File) {
@@ -31,14 +30,14 @@ object HLCup2018 : KLogging() {
 
         val data = gson.fromJson<DataFile>(file.readText(), DataFile::class.java)
 
-        Database.connection.runWithLock {
+        Database.connection.run {
             createStatement().use {
                 it.execute("PRAGMA foreign_keys = OFF")
             }
 
             autoCommit = false
 
-            prepareStatement("INSERT INTO accounts (id, email, first_name, last_name, phone, gender, birth, birth_year, country, city, joined, status, premium_start, premium_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").use {
+            prepareStatement("INSERT INTO accounts (id, email, first_name, last_name, phone, gender, birth, country, city, joined, status, premium_start, premium_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").use {
                 for (account in data.accounts) {
                     var index = 1
 
@@ -65,10 +64,6 @@ object HLCup2018 : KLogging() {
 
                     it.setString(index++, account.gender)
                     it.setInt(index++, account.birth)
-
-                    val birthCalendar = Calendar.getInstance()
-                    birthCalendar.timeInMillis = account.birth * 1000L
-                    it.setInt(index++, birthCalendar.get(Calendar.YEAR))
 
                     if (account.country != null) {
                         it.setString(index++, account.country)

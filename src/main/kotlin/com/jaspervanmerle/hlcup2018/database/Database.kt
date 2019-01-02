@@ -1,21 +1,22 @@
 package com.jaspervanmerle.hlcup2018.database
 
-import com.jaspervanmerle.hlcup2018.lock.LockedObject
 import mu.KLogging
 import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
-import java.util.concurrent.locks.ReentrantLock
 
 object Database : KLogging() {
-    val connection = LockedObject(ReentrantLock(), createConnection())
+    val connection = createConnection()
 
     fun init() {
         logger.info("Initializing database")
 
-        connection.runWithLock {
+        connection.run {
             createStatement().use {
                 it.execute("PRAGMA foreign_keys = ON")
+                it.execute("PRAGMA synchronous = OFF")
+                it.execute("PRAGMA journal_mode = OFF")
+                it.execute("PRAGMA temp_store = MEMORY")
 
                 it.executeUpdate(
                     """
@@ -27,7 +28,6 @@ object Database : KLogging() {
                         phone VARCHAR(16),
                         gender CHAR NOT NULL,
                         birth INT NOT NULL,
-                        birth_year INT NOT NULL,
                         country VARCHAR(50),
                         city VARCHAR(50),
                         joined INT NOT NULL,
@@ -49,6 +49,8 @@ object Database : KLogging() {
                 """.trimIndent()
                 )
 
+                it.executeUpdate("CREATE INDEX interests_interest_idx ON interests (interest)")
+
                 it.executeUpdate(
                     """
                     CREATE TABLE likes (
@@ -60,6 +62,9 @@ object Database : KLogging() {
                     )
                 """.trimIndent()
                 )
+
+                it.executeUpdate("CREATE INDEX likes_from_id_idx ON likes (from_id)")
+                it.executeUpdate("CREATE INDEX likes_to_id_idx ON likes (to_id)")
             }
         }
     }

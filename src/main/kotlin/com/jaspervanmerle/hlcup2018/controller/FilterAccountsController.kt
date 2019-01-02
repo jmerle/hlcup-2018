@@ -2,8 +2,10 @@ package com.jaspervanmerle.hlcup2018.controller
 
 import com.jaspervanmerle.hlcup2018.database.Database
 import com.jaspervanmerle.hlcup2018.model.response.FilterAccountsAccount
+import com.jaspervanmerle.hlcup2018.model.response.FilterAccountsPremium
 import com.jaspervanmerle.hlcup2018.model.response.FilterAccountsResponse
 import io.ktor.application.ApplicationCall
+import org.sqlite.SQLiteException
 
 object FilterAccountsController : Controller() {
     init {
@@ -38,7 +40,7 @@ object FilterAccountsController : Controller() {
                 }
                 "email_domain" -> {
                     fields += "email"
-                    checks += "email = '%@${params["email_domain"]}'"
+                    checks += "email LIKE '%@${params["email_domain"]}'"
                 }
                 "email_lt" -> {
                     fields += "email"
@@ -62,7 +64,7 @@ object FilterAccountsController : Controller() {
                 }
                 "fname_any" -> {
                     fields += "first_name"
-                    checks += "first_name IN (${params["fname_any"]!!.split(",").joinToString(",") { "'$it'" }})"
+                    checks += "first_name IN (${params["fname_any"]!!.formatList()})"
                 }
                 "fname_null" -> {
                     fields += "first_name"
@@ -102,7 +104,7 @@ object FilterAccountsController : Controller() {
                 }
                 "city_any" -> {
                     fields += "city"
-                    checks += "city IN (${params["city_eq"]!!.split(",").joinToString(",") { "'$it'" }})"
+                    checks += "city IN (${params["city_any"]!!.formatList()})"
                 }
                 "city_null" -> {
                     fields += "city"
@@ -118,58 +120,78 @@ object FilterAccountsController : Controller() {
                 }
                 "birth_year" -> {
                     fields += "birth"
-                    checks += "birth_year = ${params["birth_year"]}"
+                    checks += "STRFTIME('%Y', DATETIME(birth, 'unixepoch')) = '${params["birth_year"]}'"
                 }
                 "interests_contains" -> {
-                    checks += "TODO"
+                    val interests = params["interests_contains"]!!.split(",")
+                    val or = interests.joinToString(" OR ") { "interest = '$it'" }
+
+                    checks += "id IN (SELECT account_id FROM interests WHERE $or GROUP BY account_id HAVING COUNT(account_id) = ${interests.size})"
                 }
                 "interests_any" -> {
-                    checks += "TODO"
+                    checks += "id IN (SELECT DISTINCT account_id FROM interests WHERE interest IN (${params["interests_any"]!!.formatList()}))"
                 }
                 "likes_contains" -> {
-                    checks += "TODO"
+                    val ids = params["likes_contains"]!!.split(",")
+                    val or = ids.joinToString(" OR ") { "to_id = $it" }
+
+                    checks += "id IN (SELECT from_id FROM likes WHERE $or GROUP BY from_id HAVING COUNT(from_id) = ${ids.size})"
                 }
                 "premium_now" -> {
-                    fields += "premium"
-                    checks += "premium_start >= DATE('now') AND premium_end <= DATE('now')"
+                    fields += "premium_start"
+                    fields += "premium_end"
+                    checks += "DATETIME(premium_start, 'unixepoch') <= DATETIME('now') AND DATETIME(premium_end, 'unixepoch') >= DATETIME('now')"
                 }
                 "premium_null" -> {
-                    fields += "premium"
                     checks += "premium_start IS ${if (params["premium_null"] == "0") "NOT " else ""}NULL"
                 }
             }
         }
 
         val accounts: MutableList<FilterAccountsAccount> = mutableListOf()
+        val limit = params["limit"]
 
-        Database.connection.runWithLock {
-            createStatement().use {
-                val query =
-                    "SELECT ${fields.joinToString(", ")} FROM accounts ${if (checks.size > 0) "WHERE ${checks.joinToString(
-                        " AND "
-                    )}" else ""} LIMIT ${params["limit"]}"
+        if (limit != null && limit.toIntOrNull() != null) {
+            Database.connection.run {
+                createStatement().use {
+                    val cols = fields.joinToString(", ")
+                    val and = checks.joinToString(" AND ")
+                    val where = if (checks.size > 0) "WHERE $and" else ""
 
-                it.executeQuery(query).use { rs ->
-                    while (rs.next()) {
-                        val id = rs.getInt("id")
-                        val email = rs.getString("email")
+                    val query =
+                        "SELECT $cols FROM accounts $where ORDER BY id DESC LIMIT $limit"
 
-                        val account = FilterAccountsAccount(id, email)
+                    try {
+                        it.executeQuery(query).use { rs ->
+                            while (rs.next()) {
+                                val id = rs.getInt("id")
+                                val email = rs.getString("email")
 
-                        for (field in fields) {
-                            when (field) {
-                                "first_name" -> account.firstName = rs.getString("first_name")
-                                "last_name" -> account.lastName = rs.getString("last_name")
-                                "phone" -> account.phone = rs.getString("first_name")
-                                "gender" -> account.gender = rs.getString("first_name")
-                                "birth" -> account.birth = rs.getInt("birth")
-                                "country" -> account.country = rs.getString("country")
-                                "city" -> account.city = rs.getString("city")
-                                "status" -> account.status = rs.getString("status")
+                                val account = FilterAccountsAccount(id, email)
+
+                                for (field in fields) {
+                                    when (field) {
+                                        "first_name" -> account.firstName = rs.getString("first_name")
+                                        "last_name" -> account.lastName = rs.getString("last_name")
+                                        "phone" -> account.phone = rs.getString("phone")
+                                        "gender" -> account.gender = rs.getString("gender")
+                                        "birth" -> account.birth = rs.getInt("birth")
+                                        "country" -> account.country = rs.getString("country")
+                                        "city" -> account.city = rs.getString("city")
+                                        "status" -> account.status = rs.getString("status")
+                                        "premium_start" -> account.premium =
+                                                FilterAccountsPremium(
+                                                    rs.getInt("premium_start"),
+                                                    rs.getInt("premium_end")
+                                                )
+                                    }
+                                }
+
+                                accounts += account
                             }
                         }
-
-                        accounts += account
+                    } catch (e: SQLiteException) {
+                        logger.warn("Invalid query: $query")
                     }
                 }
             }
@@ -177,4 +199,7 @@ object FilterAccountsController : Controller() {
 
         call.respondJson(FilterAccountsResponse(accounts), 200)
     }
+
+    private fun String.formatList(): String =
+        split(",").joinToString(",") { "'$it'" }
 }

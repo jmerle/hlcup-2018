@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo Building jar
-../gradlew clean jar
+./gradlew clean jar
 
 echo Building container
 docker build -t hlcup-2018 .
