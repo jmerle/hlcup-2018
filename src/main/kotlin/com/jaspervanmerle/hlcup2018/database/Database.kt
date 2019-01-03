@@ -8,7 +8,7 @@ import java.sql.DriverManager
 object Database : KLogging() {
     val connection = createConnection()
 
-    fun init() {
+    fun beforePrepare() {
         logger.info("Initializing database")
 
         connection.run {
@@ -46,8 +46,6 @@ object Database : KLogging() {
                 """.trimIndent()
                 )
 
-                it.executeUpdate("CREATE INDEX interests_interest_idx ON interests (interest)")
-
                 it.executeUpdate(
                     """
                     CREATE TABLE likes (
@@ -59,7 +57,14 @@ object Database : KLogging() {
                     )
                 """.trimIndent()
                 )
+            }
+        }
+    }
 
+    fun afterPrepare() {
+        connection.run {
+            createStatement().use {
+                it.executeUpdate("CREATE INDEX interests_interest_idx ON interests (interest)")
                 it.executeUpdate("CREATE INDEX likes_from_id_idx ON likes (from_id)")
                 it.executeUpdate("CREATE INDEX likes_to_id_idx ON likes (to_id)")
             }

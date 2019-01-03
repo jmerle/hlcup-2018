@@ -12,7 +12,10 @@
         </encoder>
     </appender>
 
-    <root level="info">
+    <logger name="io.netty" level="WARN"/>
+    <logger name="ktor" level="WARN"/>
+
+    <root level="TRACE">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

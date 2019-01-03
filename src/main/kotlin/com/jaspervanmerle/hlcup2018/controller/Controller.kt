@@ -28,4 +28,10 @@ abstract class Controller {
 
     suspend inline fun ApplicationCall.respondJson(obj: Any, statusCode: Int) =
         respondText(gson.toJson(obj), ContentType.Application.Json, HttpStatusCode.fromValue(statusCode))
+
+    protected fun String.escapeSql(): String =
+        replace("'", "''")
+
+    protected fun String.escapeSqlList(): String =
+        split(",").joinToString(",") { "'${it.escapeSql()}'" }
 }

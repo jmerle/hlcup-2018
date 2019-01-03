@@ -7,4 +7,4 @@ echo Building container
 docker build -t hlcup-2018 .
 
 echo Running container
-docker run --rm -it -p "8080:80" -v "$(pwd)/tests/data:/tmp/data" --name hlcup-2018 hlcup-2018
+docker run --rm -it -p "8080:80" -v "$(pwd)/tests/data:/tmp/data" -e "ENVIRONMENT=dev" --name hlcup-2018 hlcup-2018

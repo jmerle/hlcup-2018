@@ -18,15 +18,17 @@ object HLCup2018 : KLogging() {
     fun prepare(dataDirectory: File) {
         logger.info("Preparing using data files inside ${dataDirectory.absolutePath}")
 
-        Database.init()
+        Database.beforePrepare()
 
         for (file in dataDirectory.listFiles().sorted()) {
             processFile(file)
         }
+
+        Database.afterPrepare()
     }
 
     fun processFile(file: File) {
-        logger.info("Processing file ${file.absolutePath}")
+        logger.debug("Processing file ${file.absolutePath}")
 
         val data = gson.fromJson<DataFile>(file.readText(), DataFile::class.java)
 

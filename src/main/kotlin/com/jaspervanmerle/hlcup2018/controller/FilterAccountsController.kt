@@ -36,35 +36,35 @@ object FilterAccountsController : Controller() {
             when (name) {
                 "sex_eq" -> {
                     fields += "gender"
-                    checks += "gender = '${params["sex_eq"]}'"
+                    checks += "gender = '${params["sex_eq"]!!.escapeSql()}'"
                 }
                 "email_domain" -> {
                     fields += "email"
-                    checks += "email LIKE '%@${params["email_domain"]}'"
+                    checks += "email LIKE '%@${params["email_domain"]!!.escapeSql()}'"
                 }
                 "email_lt" -> {
                     fields += "email"
-                    checks += "email < '${params["email_lt"]}'"
+                    checks += "email < '${params["email_lt"]!!.escapeSql()}'"
                 }
                 "email_gt" -> {
                     fields += "email"
-                    checks += "email > '${params["email_gt"]}'"
+                    checks += "email > '${params["email_gt"]!!.escapeSql()}'"
                 }
                 "status_eq" -> {
                     fields += "status"
-                    checks += "status = '${params["status_eq"]}'"
+                    checks += "status = '${params["status_eq"]!!.escapeSql()}'"
                 }
                 "status_neq" -> {
                     fields += "status"
-                    checks += "status != '${params["status_neq"]}'"
+                    checks += "status != '${params["status_neq"]!!.escapeSql()}'"
                 }
                 "fname_eq" -> {
                     fields += "first_name"
-                    checks += "first_name = '${params["fname_eq"]}'"
+                    checks += "first_name = '${params["fname_eq"]!!.escapeSql()}'"
                 }
                 "fname_any" -> {
                     fields += "first_name"
-                    checks += "first_name IN (${params["fname_any"]!!.formatList()})"
+                    checks += "first_name IN (${params["fname_any"]!!.escapeSqlList()})"
                 }
                 "fname_null" -> {
                     fields += "first_name"
@@ -72,11 +72,11 @@ object FilterAccountsController : Controller() {
                 }
                 "sname_eq" -> {
                     fields += "last_name"
-                    checks += "last_name = '${params["sname_eq"]}'"
+                    checks += "last_name = '${params["sname_eq"]!!.escapeSql()}'"
                 }
                 "sname_starts" -> {
                     fields += "last_name"
-                    checks += "last_name LIKE '${params["sname_starts"]}%'"
+                    checks += "last_name LIKE '${params["sname_starts"]!!.escapeSql()}%'"
                 }
                 "sname_null" -> {
                     fields += "last_name"
@@ -84,7 +84,7 @@ object FilterAccountsController : Controller() {
                 }
                 "phone_code" -> {
                     fields += "phone"
-                    checks += "phone LIKE '%(${params["phone_code"]})%'"
+                    checks += "phone LIKE '%(${params["phone_code"]!!.escapeSql()})%'"
                 }
                 "phone_null" -> {
                     fields += "phone"
@@ -92,7 +92,7 @@ object FilterAccountsController : Controller() {
                 }
                 "country_eq" -> {
                     fields += "country"
-                    checks += "country = '${params["country_eq"]}'"
+                    checks += "country = '${params["country_eq"]!!.escapeSql()}'"
                 }
                 "country_null" -> {
                     fields += "country"
@@ -100,11 +100,11 @@ object FilterAccountsController : Controller() {
                 }
                 "city_eq" -> {
                     fields += "city"
-                    checks += "city = '${params["city_eq"]}'"
+                    checks += "city = '${params["city_eq"]!!.escapeSql()}'"
                 }
                 "city_any" -> {
                     fields += "city"
-                    checks += "city IN (${params["city_any"]!!.formatList()})"
+                    checks += "city IN (${params["city_any"]!!.escapeSqlList()})"
                 }
                 "city_null" -> {
                     fields += "city"
@@ -112,28 +112,28 @@ object FilterAccountsController : Controller() {
                 }
                 "birth_lt" -> {
                     fields += "birth"
-                    checks += "birth < ${params["birth_lt"]}"
+                    checks += "birth < ${params["birth_lt"]!!.escapeSql()}"
                 }
                 "birth_gt" -> {
                     fields += "birth"
-                    checks += "birth > ${params["birth_gt"]}"
+                    checks += "birth > ${params["birth_gt"]!!.escapeSql()}"
                 }
                 "birth_year" -> {
                     fields += "birth"
-                    checks += "STRFTIME('%Y', DATETIME(birth, 'unixepoch')) = '${params["birth_year"]}'"
+                    checks += "STRFTIME('%Y', DATETIME(birth, 'unixepoch')) = '${params["birth_year"]!!.escapeSql()}'"
                 }
                 "interests_contains" -> {
                     val interests = params["interests_contains"]!!.split(",")
-                    val or = interests.joinToString(" OR ") { "interest = '$it'" }
+                    val or = interests.joinToString(" OR ") { "interest = '${it.escapeSql()}'" }
 
                     checks += "id IN (SELECT account_id FROM interests WHERE $or GROUP BY account_id HAVING COUNT(account_id) = ${interests.size})"
                 }
                 "interests_any" -> {
-                    checks += "id IN (SELECT DISTINCT account_id FROM interests WHERE interest IN (${params["interests_any"]!!.formatList()}))"
+                    checks += "id IN (SELECT DISTINCT account_id FROM interests WHERE interest IN (${params["interests_any"]!!.escapeSqlList()}))"
                 }
                 "likes_contains" -> {
                     val ids = params["likes_contains"]!!.split(",")
-                    val or = ids.joinToString(" OR ") { "to_id = $it" }
+                    val or = ids.joinToString(" OR ") { "to_id = '${it.escapeSql()}'" }
 
                     checks += "id IN (SELECT from_id FROM likes WHERE $or GROUP BY from_id HAVING COUNT(from_id) = ${ids.size})"
                 }
@@ -199,7 +199,4 @@ object FilterAccountsController : Controller() {
 
         call.respondJson(FilterAccountsResponse(accounts), 200)
     }
-
-    private fun String.formatList(): String =
-        split(",").joinToString(",") { "'$it'" }
 }
