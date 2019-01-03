@@ -14,9 +14,6 @@ object Database : KLogging() {
         connection.run {
             createStatement().use {
                 it.execute("PRAGMA foreign_keys = ON")
-                it.execute("PRAGMA synchronous = OFF")
-                it.execute("PRAGMA journal_mode = OFF")
-                it.execute("PRAGMA temp_store = MEMORY")
 
                 it.executeUpdate(
                     """
